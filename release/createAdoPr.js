@@ -68,6 +68,9 @@ async function commitADOL2Changes(directory, release)
         util.execInForeground(`${GIT} sparse-checkout set ${targetDirectory}`, directory, opt.dryrun);
     }
 
+    util.execInForeground(`cat ${file}`, directory, opt.dryrun);
+    util.execInForeground(`cat ${target}`, directory, opt.dryrun);
+
     if (opt.options.dryrun)
     {
         console.log(`Copy file from ${file} to ${target}`);

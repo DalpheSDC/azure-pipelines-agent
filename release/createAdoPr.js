@@ -69,6 +69,12 @@ async function commitADOL2Changes(directory, release)
     }
 
     util.execInForeground(`cat ${file}`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask/Service`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask/Service/Servicing`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask/Service/Servicing/Host`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask/Service/Servicing/Host/Deployment`, directory, opt.dryrun);
+    util.execInForeground(`ls DistributedTask/Service/Servicing/Host/Deployment/Groups`, directory, opt.dryrun);
     util.execInForeground(`cat ${target}`, directory, opt.dryrun);
 
     if (opt.options.dryrun)

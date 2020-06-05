@@ -84,6 +84,7 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         private readonly object _loggerLock = new object();
         private readonly List<IAsyncCommandContext> _asyncCommands = new List<IAsyncCommandContext>();
         private readonly HashSet<string> _outputvariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly string _localLogsFolderName = "locallogs";
         private IAgentLogPlugin _logPlugin;
         private IPagingLogger _logger;
         private IJobServerQueue _jobServerQueue;
@@ -97,6 +98,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         private bool _throttlingReported = false;
         private ExecutionTargetInfo _defaultStepTarget;
         private ExecutionTargetInfo _currentStepTarget;
+        private bool _localLogs;
+        private string _localLogsFolderPath;
+        private string _localLogsFile;
+        private FileStream _localLogsData;
+        private StreamWriter _localLogsWriter;
 
         // only job level ExecutionContext will track throttling delay.
         private long _totalThrottlingDelayInMilliseconds = 0;
@@ -150,6 +156,14 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         public override void Initialize(IHostContext hostContext)
         {
             base.Initialize(hostContext);
+
+            _localLogs = HostContext.GetService<IConfigurationStore>().GetSettings().LocalLogs;
+
+            if (_localLogs)
+            {
+                _localLogsFolderPath = Path.Combine(hostContext.GetDirectory(WellKnownDirectory.Diag), _localLogsFolderName);
+                Directory.CreateDirectory(_localLogsFolderPath);
+            }
 
             _jobServerQueue = HostContext.GetService<IJobServerQueue>();
         }
@@ -212,6 +226,18 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             _record.State = TimelineRecordState.InProgress;
 
             _jobServerQueue.QueueTimelineRecordUpdate(_mainTimelineId, _record);
+
+            if (_localLogs)
+            {
+                var localLogsJobFolder = Path.Combine(_localLogsFolderPath, _mainTimelineId.ToString());
+                Directory.CreateDirectory(localLogsJobFolder);
+
+                _localLogsFile = Path.Combine(localLogsJobFolder, $"{_record.Name}-{Guid.NewGuid().ToString()}.log");
+                _localLogsData = new FileStream(_localLogsFile, FileMode.CreateNew);
+                _localLogsWriter = new StreamWriter(_localLogsData, System.Text.Encoding.UTF8);
+
+                _logger.Write(StringUtil.Loc("LocalLogsMessage", _localLogsFile));
+            }
         }
 
         public TaskResult Complete(TaskResult? result = null, string currentOperation = null, string resultCode = null)
@@ -219,6 +245,17 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             if (result != null)
             {
                 Result = result;
+            }
+
+            if (_localLogs)
+            {
+                _localLogsWriter.Flush();
+                _localLogsData.Flush();
+                //The StreamWriter object calls Dispose() on the provided Stream object when StreamWriter.Dispose is called.
+                _localLogsWriter.Dispose();
+                _localLogsWriter = null;
+                _localLogsData.Dispose();
+                _localLogsData = null;
             }
 
             // report total delay caused by server throttling.
@@ -601,17 +638,30 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
             lock (_loggerLock)
             {
                 totalLines = _logger.TotalLines + 1;
-                _logger.Write(msg);
+
+                if (_localLogs)
+                {
+                    _localLogsWriter.WriteLine(msg);
+                }
+                else
+                {
+                    _logger.Write(msg);
+                }
             }
 
-            // write to job level execution context's log file.
-            var parentContext = _parentExecutionContext as ExecutionContext;
-            if (parentContext != null)
+            if (!_localLogs)
             {
-                lock (parentContext._loggerLock)
+                // write to job level execution context's log file.
+                var parentContext = _parentExecutionContext as ExecutionContext;
+                if (parentContext != null)
                 {
-                    parentContext._logger.Write(msg);
+                    lock (parentContext._loggerLock)
+                    {
+                        parentContext._logger.Write(msg);
+                    }
                 }
+
+                _jobServerQueue.QueueWebConsoleLine(_record.Id, msg, totalLines);
             }
 
             // write to plugin daemon,
@@ -625,7 +675,6 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
                 _logPlugin.Write(_record.Id, msg);
             }
 
-            _jobServerQueue.QueueWebConsoleLine(_record.Id, msg, totalLines);
             return totalLines;
         }
 
@@ -783,6 +832,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Worker
         public void Dispose()
         {
             _cancellationTokenSource?.Dispose();
+
+            _localLogsWriter?.Dispose();
+            _localLogsWriter = null;
+            _localLogsData?.Dispose();
+            _localLogsData = null;
         }
     }
 

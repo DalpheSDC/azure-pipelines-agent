@@ -358,6 +358,7 @@
   "LaunchBrowser": "to launch browser for AAD Device Code Flow? (Y/N)",
   "ListenForJobs": "{0:u}: Listening for Jobs",
   "LocalClockSkewed": "The local machine's clock may be out of sync with the server time by more than five minutes. Please sync your clock with your domain or internet time and try again.",
+  "LocalLogsMessage": "The agent has disabled uploading logs. After the job completes, you can retrieve this step's logs at {0} on the agent.",
   "LocalSystemAccountNotFound": "Cannot find local system account",
   "Maintenance": "Maintenance",
   "MaxHierarchyLevelReached": "Hierarchy level is more than supported limit {0}, truncating lower hierarchy.",

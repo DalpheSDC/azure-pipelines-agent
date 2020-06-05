@@ -498,6 +498,11 @@ namespace Microsoft.VisualStudio.Services.Agent.Listener
             return false;
         }
 
+        public bool GetLocalLogs()
+        {
+            return TestFlag(Configure?.LocalLogs, Constants.Agent.CommandLine.Flags.LocalLogs);
+        }
+
         public bool Unattended()
         {
             if (TestFlag(GetConfigureOrRemoveBase()?.Unattended, Constants.Agent.CommandLine.Flags.Unattended))

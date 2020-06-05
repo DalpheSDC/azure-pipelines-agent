@@ -51,6 +51,9 @@ namespace Agent.Listener.CommandLine
         [Option(Constants.Agent.CommandLine.Flags.GitUseSChannel)]
         public bool GitUseSChannel { get; set; }
 
+        [Option(Constants.Agent.CommandLine.Flags.LocalLogs)]
+        public bool LocalLogs { get; set; }
+
         [Option(Constants.Agent.CommandLine.Flags.MachineGroup)]
         public bool MachineGroup { get; set; }
 

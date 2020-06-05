@@ -421,6 +421,8 @@ namespace Microsoft.VisualStudio.Services.Agent.Listener.Configuration
 
             agentSettings.NotificationSocketAddress = command.GetNotificationSocketAddress();
 
+            agentSettings.LocalLogs = command.GetLocalLogs();
+
             _store.SaveSettings(agentSettings);
 
             if (saveProxySetting)
